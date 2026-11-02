@@ -1,304 +1,238 @@
-# GitHub 项目开发流程
+# 个人 GitHub 开发指南
 
-## 目标
+本仓库保存个人项目的开发流程和安全配置模板，适用于 Windows / PowerShell。
 
-所有新项目统一采用相同的安全配置和开发流程，避免：
+默认约定：新建个人项目使用 `main`；小改动可直接在主分支完成；较大改动使用功能分支。Git 操作由本人执行，LLM 可以协助分析、修改文件和验证，但不自行提交、推送、切换分支或改写历史；（***!!important!!*** ---- *谁不希望急头白脸改完项目发现分支里面一堆codex的push呢*🤣）。
 
-- API Key 泄露
-- 证书或私钥误提交
-- AI 插件缓存误提交
-- 忘记配置 Git Hook
-- 项目结构混乱
+文中的 `ProjectName`、用户名、邮箱和仓库地址都是占位内容，执行前替换。命令按步骤执行，遇到失败先处理，不继续整段粘贴。
 
-------
+## 1. 每台电脑首次准备
 
-# 一、新建项目
+### Git 身份与认证
 
-创建项目目录：
+先确认版本，再设置提交记录中的作者身份：
 
 ```powershell
-mkdir ProjectName
+git --version
+git config --global user.name "UserName"
+git config --global user.email "YourMail"
+git config --global init.defaultBranch main
+```
+
+检查结果：
+
+```powershell
+git config --get user.name
+git config --get user.email
+git config --get init.defaultBranch
+```
+
+- 作者姓名和邮箱不等于 GitHub 登录凭据。邮箱用于将提交关联到 GitHub 账号。
+- `--global` 是当前 Windows 用户的默认值；个别项目需要其他身份时，在该仓库内用 `--local` 设置。
+- 默认分支配置只影响以后初始化的仓库，不重命名已有分支。克隆项目沿用远程分支。
+- HTTPS 与 SSH 二选一，按实际已配置的认证方式使用；不要把 Token 写进仓库地址、脚本或文档。
+
+## 2. 目录与项目内容
+
+各项目分别放在独立目录，不把整个 `GitRepo` 初始化成一个大仓库：
+
+```text
+X:~\GitRepo\
+├─ GitMaintenance\       # 本指南与安全模板
+├─ ProjectA\             # 独立仓库
+└─ ProjectB\             # 独立仓库
+```
+
+项目目录遵循所用语言、框架及现有项目约定。按需设置源码、文档、测试和资源目录，***当然完全没必要clone本指南（bushi***。
+
+项目 README 至少说明：项目用途、运行环境、安装与运行步骤、配置方式、验证方法和已知限制。公开发布前再补充合适的许可证，并确认素材与依赖的使用条件。
+
+## 3. 获取或创建项目：选择一条路径
+
+### 路径 A：克隆已有 GitHub 仓库
+
+在 `X:~\GitRepo` 下执行：
+
+```powershell
+git clone https://github.com/UserName/ProjectName.git
 cd ProjectName
-```
-
-初始化 Git 仓库：
-
-```powershell
-git init
-```
-
-------
-
-# 二、初始化安全配置
-
-运行安全初始化脚本：
-
-```powershell
-..\init-security.ps1
-```
-
-脚本自动完成：
-
-- 检查当前目录是否为 Git 仓库
-- 检查 gitleaks 是否安装
-- 检查 pre-commit 是否安装
-- 复制 `.gitignore`
-- 复制 `.pre-commit-config.yaml`
-- 安装 pre-commit Hook
-- 扫描现有文件
-
-如果发现敏感信息：
-
-- API Key
-- Token
-- 私钥
-- 证书
-
-则必须先处理后再继续开发。
-
-------
-
-# 三、创建项目结构
-
-推荐结构：
-
-```text
-ProjectName/
-├─ src/
-├─ include/
-├─ docs/
-├─ tests/
-├─ .gitignore
-├─ .pre-commit-config.yaml
-└─ README.md
-```
-
-目录说明：
-
-| 目录      | 用途             |
-| --------- | ---------------- |
-| src       | 源代码           |
-| include   | 头文件或公共模块 |
-| docs      | 项目文档         |
-| tests     | 测试代码         |
-| README.md | 项目说明         |
-
-------
-
-# 四、开始开发
-
-编写代码：
-
-```text
-src/
-include/
-docs/
-```
-
-开发过程中：
-
-- 不提交 `.env`
-- 不提交证书
-- 不提交私钥
-- 不提交数据库文件
-- 不提交 AI 插件缓存
-
-这些文件由 `.gitignore` 自动忽略。
-
-------
-
-# 五、首次提交
-
-查看状态：
-
-```powershell
 git status
-```
-
-添加文件：
-
-```powershell
-git add .
-```
-
-提交：
-
-```powershell
-git commit -m "Initial commit"
-```
-
-提交时：
-
-- pre-commit 自动运行
-- Gitleaks 自动扫描
-
-如果检测到敏感信息：
-
-```text
-Commit blocked
-```
-
-必须先修复问题再提交。
-
-------
-
-# 六、创建 GitHub 仓库
-
-在 GitHub 创建仓库：
-
-- Private（默认）
-- Public（需要开源时）
-
-创建完成后获得仓库地址。
-
-------
-
-# 七、关联远程仓库
-
-添加远程：
-
-```powershell
-git remote add origin git@github.com:用户名/ProjectName.git
-```
-
-验证：
-
-```powershell
+git branch --show-current
 git remote -v
 ```
 
-------
+克隆已包含历史和远程关联，不再执行 `git init` 或重复添加 `origin`。先读项目说明，再按第 4 节检查忽略规则和敏感内容。ZIP 解压不包含 Git 历史，不能代替克隆。
 
-# 八、首次推送
+### 路径 B：从本地创建新项目
 
-```powershell
-git push -u origin main
-```
-
-首次推送成功后：
-
-以后只需：
-
-```powershell
-git push
-```
-
-------
-
-# 九、日常开发流程
-
-获取最新代码：
-
-```powershell
-git pull
-```
-
-开发：
-
-```text
-编写代码
-修改文档
-添加测试
-```
-
-提交：
-
-```powershell
-git add .
-git commit -m "实现某功能"
-```
-
-推送：
-
-```powershell
-git push
-```
-
-循环执行：
-
-```text
-Pull
- ↓
-开发
- ↓
-Commit
- ↓
-Push
- ↓
-Pull
-```
-
-------
-
-# 十、安全检查清单
-
-每次提交前确认：
-
--  没有提交 API Key
--  没有提交 Token
--  没有提交证书
--  没有提交私钥
--  没有提交数据库文件
--  没有提交 AI 插件缓存
--  Gitleaks 检查通过
--  Pre-commit 检查通过
-
-------
-
-# 当前安全体系
-
-第一层：
-
-```text
-.gitignore
-```
-
-阻止敏感文件进入 Git。
-
-第二层：
-
-```text
-Pre-commit
-```
-
-提交前自动检查。
-
-第三层：
-
-```text
-Gitleaks
-```
-
-检测密钥和凭据泄露。
-
-第四层：
-
-```text
-GitHub Secret Scanning
-```
-
-远程仓库二次检查。
-
-------
-
-# 新项目标准操作
-
-每个新项目固定执行：
+在 `D:\WorkSpace\GitRepo` 下执行：
 
 ```powershell
 mkdir ProjectName
 cd ProjectName
+git init -b main
+```
 
-git init
+先配置忽略规则，再开始录入代码或配置；提交前人工核对内容，避免把敏感信息加入版本管理。
 
-..\init-security.ps1
+在 GitHub 创建仓库时，默认选择 Private；明确需要公开再选 Public。本地已初始化的项目，远程创建为空仓库，不预先生成 README、许可证或 `.gitignore`，避免产生独立的初始历史。
 
-git add .
-git commit -m "Initial commit"
+完成第 4、5 节的检查和首次提交后，再关联远程并首次推送：
 
-git remote add origin git@github.com:用户名/ProjectName.git
-
+```powershell
+git remote add origin https://github.com/用户名/ProjectName.git
+git remote -v
 git push -u origin main
 ```
 
-完成项目初始化。
+若使用 SSH，换成自己的 SSH 地址。已有 `origin` 时先核对，不重复添加。推送后在 GitHub 页面确认分支、文件和提交正确；私有仓库也不能存放真实凭据。
+
+## 4. .gitignore 与提交前人工检查
+
+本指南使用 Git 自带的 `.gitignore` 和人工检查，说明统一写在这里。
+
+### 4.1 基础模板忽略什么
+
+| 类别 | 模板规则 | 用途与安全影响 |
+| --- | --- | --- |
+| 本地环境配置 | `.env`、`.env.*`，放行 `.env.example`、`.env.*.example` | 减少密码、Token、API Key 随配置误提交；示例文件只能使用占位值 |
+| 私钥与凭据 | `*.key`、`*.pem`、`*.p12`、`*.pfx`、`*.jks`、`id_rsa`、`id_dsa`、`id_ecdsa`、`id_ed25519`、`secrets/`、`credentials/` | 减少常见私钥和凭据文件误提交；`*.pem` 等规则也可能匹配公开材料，需要按用途调整 |
+| 系统文件 | `.DS_Store`、`Thumbs.db`、`ehthumbs.db`、`Desktop.ini`、`desktop.ini`、`$RECYCLE.BIN/` | 排除系统元数据和缩略图缓存，保持仓库整洁 |
+| 编辑器本地状态 | `.idea/`、`.vs/`、`*.suo`、`*.user`、`*.swp`、`*.swo`、`*~` | 排除常见本机工作状态和临时文件；团队需要共享的 IDE 配置可另行调整 |
+| 日志与临时文件 | `*.log`、`*.tmp`、`*.temp`、`*.bak`、`*.cache` | 减少日志、备份中残留的私人信息进入仓库，同时排除无关文件 |
+| Python 本地环境与缓存 | `__pycache__/`、`*.py[cod]`、`.venv/`、`venv/`、`.pytest_cache/`、`.mypy_cache/`、`.ruff_cache/` | 排除可重建的解释器缓存、虚拟环境及检查缓存 |
+| Node.js 依赖 | `node_modules/` | 排除本地安装的依赖；项目清单和依赖锁文件仍应按项目约定保留 |
+| 构建与测试产物 | `build/`、`dist/`、`coverage/`、`.coverage`、`htmlcov/` | 排除常见可重新生成的输出；若同名目录保存正式源码或交付材料，需要调整 |
+| AI 本地记录与缓存 | `.cursor-cache/`、`.aider.chat.history.md`、`.aider.input.history`、`.aider.tags.cache.v*/` | 排除部分可能携带私人上下文的会话记录和缓存，不统一屏蔽共享开发规则 |
+
+这是一份基础模板，不覆盖所有语言、框架和敏感文件命名。新增技术栈或本地配置时，再按实际路径补充。
+
+以下内容没有默认全部忽略：
+
+- `.vscode/`、`.cursor/`、`.continue/`、`AGENTS.md` 等可能保存共享配置或开发规则的文件；提交前检查是否包含本机路径、凭据或私人内容。
+- 公钥、`*.crt`、`*.cert` 等公开材料；是否提交取决于用途，不将公钥一概视为私钥。
+- `*.dll`、`*.lib`、`*.exe`、`*.db` 等宽泛扩展名，避免误屏蔽必要依赖、样例数据库或正式交付文件；本地数据库和生成的二进制产物应按项目补充精确路径规则。
+- Docker 本地覆盖配置、Terraform 状态与变量等专项文件；使用这些工具时，应补充对应的本地配置、状态和凭据规则，不能直接套用基础模板后就提交。
+
+总之，在提交之前对应具体的仓库认真的检查比什么都重要不是吗？所谓开源的部分仅仅是核心的无害的内容而已。
+
+### 4.2 如何应用
+
+新项目将本仓库的 `.gitignore` 复制到项目根目录，再根据实际内容调整。已有项目先阅读原有规则并合并，不直接覆盖。
+
+规则会按路径匹配，目录规则也可能匹配项目下的同名子目录。添加规则后，检查预期保留的源码、配置示例和测试材料是否仍能纳入管理。忽略文件不会被加密、删除或自动清理。
+
+**`.gitignore` 只减少文件误添加，不扫描文件内容，也不是安全保证。** 已跟踪文件不受新增忽略规则影响，历史中的文件也不会因此消失。密钥写进普通源码、README 或放行的示例文件，仍可能被提交。
+
+### 4.3 提交前人工检查
+
+每次提交前查看新增文件和暂存差异，重点检查：
+
+- 源码、配置和文档中是否存在真实 API Key、Token、密码或私钥。
+- 日志、截图、数据库、测试样例中是否含私人信息或真实业务数据。
+- 是否误加入依赖、缓存、大型临时文件或无关修改。
+- 示例文件是否使用占位值，需要保留的项目文件是否被规则误忽略。
+
+具体查看和暂存步骤见第 5 节。没有自动扫描时，不会有工具替你拦截敏感内容；真实凭据已经泄露时（***将你的key进行删除重新生成，不要心怀侥幸！***），先撤销或轮换，再处理文件与历史。
+
+## 5. 日常开发：检查 → 同步 → 修改 → 验证 → 提交 → 推送
+
+### 5.1 开始前检查并同步
+
+```powershell
+git status
+git branch --show-current
+```
+
+确认项目、分支和未提交内容。已有修改时先决定保留并提交、暂存，或继续完成当前工作，不直接丢弃。
+
+已设置上游的分支，在工作区干净后执行：
+
+```powershell
+git pull --ff-only
+```
+
+若提示分支分叉，停止并检查双方提交，再决定如何合并或变基，不用强制推送解决。
+
+### 5.2 选择改动范围并开发
+
+- 小型文档修正、简单独立修复，可以直接在 `main` 开发。
+- 涉及多个模块、实验或较长时间的工作，先从同步后的主分支创建功能分支：
+
+```powershell
+git switch -c feat/功能简述
+```
+
+每次明确要解决的问题、涉及文件及验证方法；避免把无关整理混入同一次修改。LLM 修改后也要阅读差异，核对行为和依赖变化。
+
+### 5.3 验证改动
+
+```powershell
+git diff --stat
+git diff
+```
+
+执行与改动相匹配的构建、测试或实际运行检查。文档修改检查内容和命令是否一致；涉及硬件或外部服务时，区分静态检查、模拟验证和真实运行结果，未验证的部分明确记录。
+
+### 5.4 选择文件并检查暂存内容
+
+先查看新增文件和修改，再按文件或目录添加本次需要提交的内容：
+
+```powershell
+git status
+# 示例：替换为本次实际修改的路径
+git add README.md
+# 核对暂存内容
+git diff --cached --stat
+git diff --cached
+```
+
+`git diff` 不显示未跟踪文件的内容，需要另行打开查看。确认没有密钥、私人配置、大型临时文件或无关产物。只有确认全部改动都属于本次提交时才使用 `git add .`。
+
+### 5.5 提交并推送
+
+提交信息写清变化，可使用简单前缀：`feat` 新功能、`fix` 修复、`docs` 文档、`refactor` 重构、`chore` 配置与维护。
+
+```powershell
+git commit -m "docs: 完善个人开发流程"
+```
+
+提交后若继续修改文件，重新检查和验证；新修改不会自动进入之前的提交。
+
+上游已设置时执行：
+
+```powershell
+git push
+```
+
+新功能分支首次推送，使用实际分支名：
+
+```powershell
+git push -u origin feat/功能简述
+```
+
+较大改动通过 GitHub PR 查看完整差异和验证结果，再合并到 `main`。合并后切回主分支并同步；确认工作已保留后再清理分支。
+
+最后核对 `git status` 和 GitHub 页面：提交成功不代表推送成功，推送成功也不代表代码已通过测试。
+
+## 6. 常见失败与处理边界
+
+| 情况 | 处理原则 |
+| --- | --- |
+| 拉取或推送失败 | 记录错误，检查网络、代理和认证，恢复后重试；不靠删除仓库或重置历史解决 |
+| 推送被拒绝，远程有新提交 | 检查双方变化，妥善同步后重试，不直接强推 |
+| 出现合并冲突 | 逐处理解并解决，重新验证；不确定时停下，不随意选一侧覆盖 |
+| 人工检查发现疑似密钥 | 先确认是否真实凭据；移除真实凭据，改用本地配置或环境变量，再检查暂存内容 |
+| 真实凭据已提交 | 先撤销或轮换凭据；再按是否推送、是否共享确定历史清理方案，仅删除当前文件不足以消除泄露 |
+| 必须执行重置、清理或改写历史 | 先确认影响范围、未保存内容和恢复方式，由本人明确决定后执行 |
+
+## 7. 每次提交与推送的检查清单
+
+- [ ] 当前项目、分支及远程目标正确。
+- [ ] 本次改动目的明确，没有混入无关文件。
+- [ ] 已检查新增文件及暂存差异。
+- [ ] 没有真实凭据、私人数据和不必要的产物。
+- [ ] 已人工核对敏感内容，没有把忽略规则当作安全保证。
+- [ ] 已完成必要验证，未完成的验证有明确说明。
+- [ ] 提交信息具体，必要的使用说明已更新。
+- [ ] 推送后已在 GitHub 确认结果。
